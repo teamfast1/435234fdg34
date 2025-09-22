@@ -1,0 +1,138 @@
+{
+  "presentations": {
+    "collection_name": "presentations",
+    "fields": {
+      "id": {
+        "type": "string",
+        "description": "Уникальный идентификатор презентации (автоматически генерируется Firebase)",
+        "required": true,
+        "example": "abc123def456"
+      },
+      "title": {
+        "type": "string",
+        "description": "Название презентации",
+        "required": true,
+        "max_length": 200,
+        "example": "Отчет по продажам Q1 2025"
+      },
+      "description": {
+        "type": "string",
+        "description": "Описание презентации",
+        "required": false,
+        "max_length": 500,
+        "example": "Ежеквартальный отчет по продажам с графиками и анализом"
+      },
+      "fileData": {
+        "type": "string",
+        "description": "Данные файла в формате base64",
+        "required": true,
+        "note": "Для больших файлов лучше использовать Firebase Storage"
+      },
+      "fileName": {
+        "type": "string",
+        "description": "Исходное имя файла",
+        "required": true,
+        "example": "presentation.pdf"
+      },
+      "fileType": {
+        "type": "string",
+        "description": "Тип файла",
+        "required": true,
+        "allowed_values": [
+          "pdf",
+          "pptx",
+          "ppt"
+        ],
+        "example": "pdf"
+      },
+      "fileSize": {
+        "type": "number",
+        "description": "Размер файла в байтах",
+        "required": true,
+        "example": 1048576
+      },
+      "createdAt": {
+        "type": "timestamp",
+        "description": "Дата и время создания",
+        "required": true,
+        "auto_generated": true
+      },
+      "updatedAt": {
+        "type": "timestamp",
+        "description": "Дата и время последнего обновления",
+        "required": true,
+        "auto_generated": true
+      },
+      "views": {
+        "type": "number",
+        "description": "Количество просмотров",
+        "required": true,
+        "default": 0
+      },
+      "isPublic": {
+        "type": "boolean",
+        "description": "Доступна ли презентация для публичного просмотра",
+        "required": true,
+        "default": true
+      },
+      "ownerEmail": {
+        "type": "string",
+        "description": "Email владельца презентации (если используется аутентификация)",
+        "required": false,
+        "example": "user@example.com"
+      },
+      "tags": {
+        "type": "array",
+        "description": "Теги для категоризации презентаций",
+        "required": false,
+        "example": [
+          "продажи",
+          "отчет",
+          "Q1"
+        ]
+      }
+    },
+    "indexes": [
+      {
+        "field": "createdAt",
+        "direction": "desc"
+      },
+      {
+        "field": "views",
+        "direction": "desc"
+      },
+      {
+        "field": "isPublic",
+        "direction": "asc"
+      },
+      {
+        "field": "fileType",
+        "direction": "asc"
+      }
+    ],
+    "security_rules": {
+      "read": "Все пользователи могут читать публичные презентации",
+      "write": "Только владельцы могут создавать/изменять свои презентации"
+    }
+  },
+  "stats": {
+    "collection_name": "stats",
+    "description": "Общая статистика приложения",
+    "fields": {
+      "totalPresentations": {
+        "type": "number",
+        "description": "Общее количество презентаций",
+        "default": 0
+      },
+      "totalViews": {
+        "type": "number",
+        "description": "Общее количество просмотров",
+        "default": 0
+      },
+      "lastUpdated": {
+        "type": "timestamp",
+        "description": "Время последнего обновления статистики"
+      }
+    }
+  }
+}

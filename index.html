@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Мини-хостинг презентаций с Firebase</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Экран настройки Firebase (отображается если не настроено) -->
+        <div class="firebase-setup" id="firebaseSetup">
+            <div class="setup-container">
+                <div class="card">
+                    <div class="card__body">
+                        <div class="setup-header">
+                            <div class="setup-icon">🔧</div>
+                            <h2>Настройка Firebase</h2>
+                            <p>Для работы с облачной базой данных необходимо настроить Firebase Firestore</p>
+                        </div>
+                        
+                        <div class="firebase-config-form">
+                            <div class="form-group">
+                                <label class="form-label">Конфигурация Firebase (JSON)</label>
+                                <textarea class="form-control" id="firebaseConfigInput" rows="8" placeholder='{
+  "apiKey": "AIzaSyBxxxxxxxxxxxxxxxxxxxxxx",
+  "authDomain": "your-project.firebaseapp.com",
+  "projectId": "your-project-id",
+  "storageBucket": "your-project.appspot.com",
+  "messagingSenderId": "123456789",
+  "appId": "1:123456789:web:xxxxxxxxx"
+}'></textarea>
+                                <div class="config-hint">
+                                    <p>Получите конфигурацию в консоли Firebase:</p>
+                                    <ol>
+                                        <li>Создайте проект в <a href="https://console.firebase.google.com" target="_blank">Firebase Console</a></li>
+                                        <li>Добавьте веб-приложение в проект</li>
+                                        <li>Включите Cloud Firestore</li>
+                                        <li>Скопируйте конфигурацию сюда</li>
+                                    </ol>
+                                </div>
+                            </div>
+                            
+                            <div class="form-actions">
+                                <button type="button" class="btn btn--outline" id="demoModeBtn">
+                                    🎮 Режим демонстрации
+                                </button>
+                                <button type="button" class="btn btn--primary" id="connectFirebaseBtn">
+                                    🔌 Подключиться к Firebase
+                                </button>
+                            </div>
+                            
+                            <div class="connection-status" id="connectionStatus"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Основное приложение -->
+        <div class="main-app" id="mainApp">
+            <!-- Шапка приложения -->
+            <header class="header">
+                <div class="header-content">
+                    <div>
+                        <h1>📊 Мини-хостинг презентаций</h1>
+                        <p>Облачное хранение презентаций с Firebase Firestore</p>
+                        <div class="connection-indicator" id="connectionIndicator">
+                            <span class="connection-dot"></span>
+                            <span id="connectionText">Подключено к Firebase</span>
+                        </div>
+                    </div>
+                    <div class="header-actions">
+                        <button class="btn btn--outline btn--sm" id="themeToggle">🌙</button>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Навигация -->
+            <nav class="navigation" id="navigation">
+                <button class="nav-btn active" data-route="/">📁 Каталог</button>
+                <button class="nav-btn" data-route="/upload">⬆️ Загрузить</button>
+                <button class="nav-btn" data-route="/stats">📊 Статистика</button>
+                <button class="nav-btn" data-route="/settings">⚙️ Настройки</button>
+            </nav>
+
+            <!-- Основной контент -->
+            <main class="main" id="mainContent">
+                <!-- Главная страница - каталог -->
+                <section class="page active" id="catalogPage">
+                    <div class="page-header">
+                        <h2>Каталог презентаций</h2>
+                        <div class="catalog-controls">
+                            <div class="search-box">
+                                <input type="text" class="form-control" id="searchInput" placeholder="Поиск по названию...">
+                            </div>
+                            <select class="form-control" id="sortSelect">
+                                <option value="date">По дате</option>
+                                <option value="name">По названию</option>
+                                <option value="size">По размеру</option>
+                                <option value="views">По просмотрам</option>
+                            </select>
+                            <button class="btn btn--primary" onclick="navigateTo('/upload')">➕ Добавить презентацию</button>
+                        </div>
+                    </div>
+                    
+                    <div class="loading-state" id="catalogLoading">
+                        <div class="loading">Загрузка каталога...</div>
+                    </div>
+                    
+                    <div class="presentations-grid" id="presentationsGrid">
+                        <!-- Презентации будут добавляться динамически -->
+                    </div>
+                    
+                    <div class="empty-state" id="emptyState">
+                        <div class="empty-icon">📂</div>
+                        <h3>Нет презентаций</h3>
+                        <p>Загрузите вашу первую презентацию, чтобы начать</p>
+                        <button class="btn btn--primary" onclick="navigateTo('/upload')">⬆️ Загрузить презентацию</button>
+                    </div>
+                </section>
+
+                <!-- Страница загрузки -->
+                <section class="page" id="uploadPage">
+                    <div class="page-header">
+                        <h2>Загрузка презентации</h2>
+                    </div>
+                    
+                    <div class="upload-container">
+                        <div class="upload-area" id="uploadArea">
+                            <div class="upload-content">
+                                <div class="upload-icon">📁</div>
+                                <h3>Перетащите файл сюда</h3>
+                                <p>или</p>
+                                <button type="button" class="btn btn--primary" id="fileSelectBtn">
+                                    📂 Выберите файл
+                                </button>
+                                <p class="upload-hint">Поддерживаемые форматы: PDF (рекомендуется), PPTX, PPT</p>
+                                <p class="upload-hint">Максимальный размер: 500 КБ (ограничение Firestore)</p>
+                            </div>
+                            <input type="file" id="fileInput" accept=".pdf,.pptx,.ppt" style="display: none;">
+                        </div>
+                        
+                        <div class="upload-form hidden" id="uploadForm">
+                            <div class="card">
+                                <div class="card__body">
+                                    <h4>Информация о презентации</h4>
+                                    <div class="file-preview" id="filePreview">
+                                        <!-- Информация о файле -->
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label" for="presentationTitle">Название презентации</label>
+                                        <input type="text" class="form-control" id="presentationTitle" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label" for="presentationDescription">Описание (необязательно)</label>
+                                        <textarea class="form-control" id="presentationDescription" rows="3"></textarea>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Теги (через запятую)</label>
+                                        <input type="text" class="form-control" id="presentationTags" placeholder="образование, бизнес, технологии">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="checkbox-label">
+                                            <input type="checkbox" id="isPublicCheckbox" checked>
+                                            Сделать презентацию публичной
+                                        </label>
+                                    </div>
+                                    <div class="upload-progress hidden" id="uploadProgress">
+                                        <div class="progress-bar">
+                                            <div class="progress-fill" id="progressFill"></div>
+                                        </div>
+                                        <div class="progress-text" id="progressText">Сохранение в Firebase...</div>
+                                    </div>
+                                    <div class="form-actions">
+                                        <button type="button" class="btn btn--outline" id="cancelUploadBtn">Отменить</button>
+                                        <button type="button" class="btn btn--primary" id="saveUploadBtn">💾 Сохранить в облако</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Страница просмотра презентации -->
+                <section class="page" id="presentationPage">
+                    <div class="presentation-header" id="presentationHeader">
+                        <div class="presentation-info">
+                            <h2 id="presentationTitle2">Название презентации</h2>
+                            <p id="presentationMeta">Дата загрузки • Размер</p>
+                            <div class="presentation-tags" id="presentationTags2"></div>
+                        </div>
+                        <div class="presentation-actions">
+                            <button class="btn btn--outline btn--sm" id="shareBtn">🔗 Поделиться</button>
+                            <button class="btn btn--outline btn--sm" onclick="navigateTo('/')">← Назад к каталогу</button>
+                        </div>
+                    </div>
+
+                    <!-- PDF просмотрщик -->
+                    <div class="viewer-container" id="viewerContainer">
+                        <div class="pdf-viewer" id="pdfViewer">
+                            <div class="viewer-controls">
+                                <div class="controls-group">
+                                    <button class="btn btn--outline btn--sm" id="prevPageBtn" title="Предыдущая страница">◀️</button>
+                                    <span class="page-info">
+                                        Страница 
+                                        <input type="number" id="pageInput" min="1" value="1" class="page-input">
+                                        из <span id="totalPages">1</span>
+                                    </span>
+                                    <button class="btn btn--outline btn--sm" id="nextPageBtn" title="Следующая страница">▶️</button>
+                                </div>
+                                <div class="controls-group">
+                                    <button class="btn btn--outline btn--sm" id="zoomOutBtn" title="Уменьшить">🔍−</button>
+                                    <span id="zoomLevel">100%</span>
+                                    <button class="btn btn--outline btn--sm" id="zoomInBtn" title="Увеличить">🔍+</button>
+                                    <button class="btn btn--outline btn--sm" id="fullscreenBtn" title="Полный экран">⛶</button>
+                                </div>
+                            </div>
+                            <div class="pdf-canvas-container">
+                                <canvas id="pdfCanvas"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- PPTX уведомление -->
+                        <div class="pptx-viewer hidden" id="pptxViewer">
+                            <div class="card">
+                                <div class="card__body">
+                                    <div class="pptx-notice">
+                                        <div class="notice-icon">⚠️</div>
+                                        <h3>Формат требует конвертации</h3>
+                                        <p>Для лучшего просмотра рекомендуется конвертировать PPTX/PPT в PDF формат.</p>
+                                        <button class="btn btn--primary" id="convertHelpBtn">💡 Как конвертировать?</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Страница статистики -->
+                <section class="page" id="statsPage">
+                    <div class="page-header">
+                        <h2>📊 Статистика в реальном времени</h2>
+                    </div>
+                    
+                    <div class="stats-content">
+                        <div class="stats-overview">
+                            <div class="stat-card">
+                                <div class="stat-icon">📄</div>
+                                <div class="stat-info">
+                                    <div class="stat-value" id="totalPresentationsStats">0</div>
+                                    <div class="stat-label">Всего презентаций</div>
+                                </div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-icon">👁️</div>
+                                <div class="stat-info">
+                                    <div class="stat-value" id="totalViewsStats">0</div>
+                                    <div class="stat-label">Общие просмотры</div>
+                                </div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-icon">🏷️</div>
+                                <div class="stat-info">
+                                    <div class="stat-value" id="totalTagsStats">0</div>
+                                    <div class="stat-label">Уникальных тегов</div>
+                                </div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-icon">📈</div>
+                                <div class="stat-info">
+                                    <div class="stat-value" id="avgViewsStats">0</div>
+                                    <div class="stat-label">Среднее просмотров</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="popular-presentations">
+                            <h3>🔥 Популярные презентации</h3>
+                            <div class="popular-list" id="popularList">
+                                <!-- Популярные презентации -->
+                            </div>
+                        </div>
+
+                        <div class="file-types-stats">
+                            <h3>📊 Статистика по типам файлов</h3>
+                            <div class="file-types-chart" id="fileTypesChart">
+                                <!-- График типов файлов -->
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Страница настроек -->
+                <section class="page" id="settingsPage">
+                    <div class="page-header">
+                        <h2>Настройки Firebase и управление</h2>
+                    </div>
+                    
+                    <div class="settings-content">
+                        <div class="card">
+                            <div class="card__body">
+                                <h4>🔌 Подключение к Firebase</h4>
+                                <div class="firebase-status" id="firebaseStatus">
+                                    <div class="status-item">
+                                        <span class="status-label">Статус:</span>
+                                        <span class="status-value" id="connectionStatusText">Подключено</span>
+                                    </div>
+                                    <div class="status-item">
+                                        <span class="status-label">Проект:</span>
+                                        <span class="status-value" id="projectIdText">-</span>
+                                    </div>
+                                    <div class="status-item">
+                                        <span class="status-label">Регион:</span>
+                                        <span class="status-value" id="regionText">-</span>
+                                    </div>
+                                </div>
+                                <div class="firebase-actions">
+                                    <button class="btn btn--outline btn--sm" id="testConnectionBtn">🔍 Проверить подключение</button>
+                                    <button class="btn btn--outline btn--sm" id="reconfigureBtn">⚙️ Изменить настройки</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <div class="card__body">
+                                <h4>💾 Управление данными</h4>
+                                <p>Операции с базой данных Firestore</p>
+                                <div class="data-actions">
+                                    <button class="btn btn--outline" id="exportDataBtn">📤 Экспорт данных (JSON)</button>
+                                    <button class="btn btn--outline" id="importDataBtn">📥 Импорт из localStorage</button>
+                                    <button class="btn btn--outline" id="clearFirestoreBtn">🗑️ Очистить Firestore</button>
+                                </div>
+                                <input type="file" id="importFileInput" accept=".json" style="display: none;">
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <div class="card__body">
+                                <h4>🚀 Развертывание</h4>
+                                <div class="deployment-info">
+                                    <h5>Настройка правил безопасности Firestore:</h5>
+                                    <pre class="code-block">rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if true;
+    }
+  }
+}</pre>
+                                    <p class="warning-text">⚠️ Внимание: Эти правила разрешают полный доступ. Для продакшн используйте более строгие правила.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </main>
+        </div>
+
+        <!-- Модальное окно для поделиться -->
+        <div class="modal hidden" id="shareModal">
+            <div class="modal-overlay"></div>
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>🔗 Поделиться презентацией</h3>
+                    <button type="button" class="modal-close" id="closeShareModalBtn">✕</button>
+                </div>
+                <div class="modal-body">
+                    <div class="share-content">
+                        <label class="form-label">Ссылка для доступа:</label>
+                        <div class="link-input-group">
+                            <input type="text" class="form-control" id="shareLink" readonly>
+                            <button class="btn btn--primary" id="copyLinkBtn">📋 Копировать</button>
+                        </div>
+                        
+                        <div class="qr-section">
+                            <h5>QR-код для быстрого доступа:</h5>
+                            <div class="qr-placeholder" id="qrCode">
+                                <!-- QR-код будет сгенерирован здесь -->
+                            </div>
+                        </div>
+                        
+                        <div class="share-stats">
+                            <p><strong>Статистика:</strong> <span id="shareViews">0</span> просмотров</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Модальное окно помощи по конвертации -->
+        <div class="modal hidden" id="convertModal">
+            <div class="modal-overlay"></div>
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>💡 Конвертация в PDF</h3>
+                    <button type="button" class="modal-close" id="closeConvertModalBtn">✕</button>
+                </div>
+                <div class="modal-body">
+                    <h4>Онлайн конвертеры:</h4>
+                    <ul>
+                        <li><a href="https://www.ilovepdf.com/ru/powerpoint_to_pdf" target="_blank">ILovePDF</a></li>
+                        <li><a href="https://smallpdf.com/ru/ppt-to-pdf" target="_blank">SmallPDF</a></li>
+                        <li><a href="https://pdf24.org/ru/ppt-to-pdf" target="_blank">PDF24</a></li>
+                    </ul>
+                    <h4>Microsoft PowerPoint:</h4>
+                    <ol>
+                        <li>Откройте файл в PowerPoint</li>
+                        <li>Нажмите "Файл" → "Экспорт" → "Создать PDF/XPS"</li>
+                        <li>Выберите место сохранения и нажмите "Опубликовать"</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+
+        <!-- Уведомления -->
+        <div class="notifications" id="notifications"></div>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-firestore-compat.js"></script>
+    <!-- PDF.js библиотека -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <!-- Основной скрипт приложения -->
+    <script src="app.js"></script>
+</body>
+</html>
